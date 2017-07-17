@@ -1,5 +1,8 @@
-AWSTemplateFormatVersion : '2010-09-09'
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
+Parameters:
+  FrontendOriginPath:
+    Type: String
 Resources:
   BackendLambdaFunction:
     Type: AWS::Serverless::Function
@@ -13,6 +16,56 @@ Resources:
           Properties:
             Path: /
             Method: GET
+  FrontendS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+  FrontendS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendS3Bucket
+      PolicyDocument:
+        Statement:
+          -
+            Effect: "Allow"
+            Action:
+              - "s3:GetObject"
+            Principal: "*"
+            Resource:
+              !Join
+              - ""
+              - - "arn:aws:s3:::"
+                - !Ref FrontendS3Bucket
+                - "/*"
+  FrontendCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: 'true'
+        HttpVersion: http2
+        Origins:
+        - DomainName: !Select [2, !Split ["/", !GetAtt FrontendS3Bucket.WebsiteURL]]
+          Id: !Ref FrontendOriginPath
+          OriginPath: !Join
+            - ''
+            - - /
+              - !Ref FrontendOriginPath
+          CustomOriginConfig:
+            HTTPPort: 80
+            HTTPSPort: 443
+            OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          Compress: 'true'
+          MinTTL: 0
+          DefaultTTL: 2592000
+          MaxTTL: 2592000
+          TargetOriginId: !Ref FrontendOriginPath
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+            QueryString: 'false'
+            Cookies:
+              Forward: none
 Outputs:
   ApiUrl:
     Value: !Join
@@ -23,3 +76,10 @@ Outputs:
         - !Ref 'AWS::Region'
         - '.amazonaws.com/'
         - !Ref ServerlessRestApiProdStage
+  FrontendBucketName:
+    Value: !Ref FrontendS3Bucket
+  FrontendUrl:
+    Value: !Join
+      - ''
+      - - https://
+        - !GetAtt FrontendCloudFrontDistribution.DomainName
