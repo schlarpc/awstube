@@ -46,7 +46,7 @@ Resources:
         HttpVersion: http2
         Origins:
         - DomainName: !Select [2, !Split ["/", !GetAtt FrontendS3Bucket.WebsiteURL]]
-          Id: !Ref FrontendOriginPath
+          Id: S3Bucket
           OriginPath: !Join
             - ''
             - - /
@@ -60,7 +60,7 @@ Resources:
           MinTTL: 0
           DefaultTTL: 2592000
           MaxTTL: 2592000
-          TargetOriginId: !Ref FrontendOriginPath
+          TargetOriginId: S3Bucket
           ViewerProtocolPolicy: redirect-to-https
           ForwardedValues:
             QueryString: 'false'
@@ -78,6 +78,8 @@ Outputs:
         - !Ref ServerlessRestApiProdStage
   FrontendBucketName:
     Value: !Ref FrontendS3Bucket
+  FrontendDistributionId:
+    Value: !Ref FrontendCloudFrontDistribution
   FrontendUrl:
     Value: !Join
       - ''

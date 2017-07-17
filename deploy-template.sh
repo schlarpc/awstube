@@ -22,3 +22,6 @@ if [ "$INITIAL_DEPLOY" = "true" ]; then
     FRONTEND_BUCKET=$(./get-output.sh FrontendBucketName)
     aws s3 sync ./frontend s3://$FRONTEND_BUCKET/$FRONTEND_PATH
 fi
+
+aws configure set preview.cloudfront true
+aws cloudfront create-invalidation --distribution-id $(./get-output.sh FrontendDistributionId) --paths '/*'
